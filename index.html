@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mondelez Partner Portal</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for a professional feel */
+        body { font-family: 'Inter', sans-serif; }
+        .sidebar { 
+            transition: width 0.3s ease; 
+            flex-shrink: 0; /* Prevents sidebar from shrinking when content grows */
+        }
+        
+        /* Vertical Navigation Link Styling (Menu Items) */
+        .nav-link-item { 
+            /* Added items-center and justify-start for consistent alignment */
+            @apply flex items-center justify-start p-3 text-sm font-medium rounded-lg transition-all duration-200 text-white/80 hover:bg-mondelez-yellow hover:text-mondelez-blue;
+        }
+        
+        /* Dropdown Sub-Link Styling (Internal Menu Links) */
+        .nav-link-sub {
+            @apply block px-4 py-2 text-sm font-medium text-white/80 hover:bg-mondelez-blue/70 hover:text-white whitespace-nowrap;
+        }
+        .nav-text {
+            white-space: nowrap;
+            overflow: hidden;
+            transition: width 0.3s ease, opacity 0.3s ease;
+        }
+
+        /* Active Link Styling (Solid block of accent color) */
+        .active-link { 
+            /* Applied to top-level link (Dashboard or Dropdown Button) */
+            @apply bg-mondelez-yellow text-mondelez-blue font-bold shadow-md hover:bg-mondelez-yellow hover:text-mondelez-blue;
+        }
+
+        .active-link-sub {
+            /* Applied to links inside dropdowns */
+            @apply bg-mondelez-yellow text-mondelez-blue font-bold shadow-md hover:bg-mondelez-yellow hover:text-mondelez-blue;
+        }
+
+        /* Ensure main content takes up remaining vertical space */
+        .page-content { 
+            min-height: calc(100vh - 4rem); /* Full height minus fixed header */
+        }
+        .chat-container {
+            /* Adjusted height to fill the large modal */
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0; /* Important for flex children inside a fixed height parent */
+        }
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+        /* Custom scrollbar for aesthetics */
+        .chat-messages::-webkit-scrollbar { width: 8px; }
+        .chat-messages::-webkit-scrollbar-thumb { background-color: #4f2170; border-radius: 4px; }
+        .chat-messages::-webkit-scrollbar-track { background-color: #e5e7eb; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'mondelez-blue': '#4f2170', /* Primary Deep Purple */
+                        'mondelez-yellow': '#ffd700', /* Primary Gold/Accent Yellow */
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Icon Library (Lucide) -->
+    <script type="module">
+        import { createIcons, Search, LayoutDashboard, Briefcase, Users, BookOpen, Award, Globe, ClipboardList, Phone, FileText, Bot, ChevronsLeft, GraduationCap, Calendar, MessageSquare, Download, ChevronDown, User } from 'https://cdn.jsdelivr.net/npm/lucide@latest/dist/esm/lucide.js';
+        createIcons({ icons: { Search, LayoutDashboard, Briefcase, Users, BookOpen, Award, Globe, ClipboardList, Phone, FileText, Bot, ChevronsLeft, GraduationCap, Calendar, MessageSquare, Download, ChevronDown, User } });
+    </script>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- Main Application Container (Horizontal Flex) -->
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <div id="sidebar" class="sidebar w-64 bg-mondelez-blue text-white p-4 flex flex-col justify-between">
+            <div>
+                <!-- Logo/Title and Collapse Button -->
+                <div class="flex items-center justify-between mb-8">
+                    <div id="sidebar-header" class="text-xl font-extrabold text-mondelez-yellow flex items-center overflow-hidden whitespace-nowrap">
+                        <img src="https://placehold.co/40x40/ffd700/4f2170?text=M" alt="Logo" class="rounded mr-2">
+                        <span id="logo-text" class="nav-text">Partner Portal</span>
+                    </div>
+                    <button id="sidebar-toggle" onclick="toggleSidebar()" class="text-white hover:text-mondelez-yellow p-1 transition-transform duration-300">
+                        <i id="sidebar-toggle-icon" data-lucide="chevrons-left" class="w-6 h-6 transition-transform duration-300"></i>
+                    </button>
+                </div>
+
+                <!-- Vertical Navigation Bar -->
+                <nav id="vertical-nav" class="space-y-2">
+                    
+                    <!-- 1. Dashboard (Simple Link) -->
+                    <a href="#" data-page="dashboard" class="nav-link-item active-link" onclick="showPage('dashboard', this)">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5 mr-3"></i>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+
+                    <!-- 2. Strategy & Briefing (Dropdown) -->
+                    <div class="relative">
+                        <button id="strategy-btn" onclick="toggleDropdown(event, this, 'strategy-menu')" class="nav-link-item flex items-center w-full">
+                            <i data-lucide="briefcase" class="w-5 h-5 mr-3"></i>
+                            <span class="nav-text flex justify-between items-center w-full">
+                                Strategy & Briefing
+                                <i data-lucide="chevron-down" class="w-4 h-4 ml-1 transition-transform duration-200"></i>
+                            </span>
+                        </button>
+                        <div id="strategy-menu" class="hidden bg-mondelez-blue pt-1 pb-1 rounded-lg shadow-xl min-w-[200px] z-10 top-0 left-full border border-mondelez-blue/50 absolute">
+                            <a href="#" data-page="briefing" class="nav-link-sub" onclick="showPage('briefing', this, true)">Briefing Room</a>
+                            <a href="#" data-page="engagement" class="nav-link-sub" onclick="showPage('engagement', this, true)">Engagement Platform</a>
+                        </div>
+                    </div>
+
+                    <!-- 3. Product & Catalog (Dropdown) -->
+                    <div class="relative">
+                        <button id="product-btn" onclick="toggleDropdown(event, this, 'product-menu')" class="nav-link-item flex items-center w-full">
+                            <i data-lucide="book-open" class="w-5 h-5 mr-3"></i>
+                            <span class="nav-text flex justify-between items-center w-full">
+                                Product & Catalog
+                                <i data-lucide="chevron-down" class="w-4 h-4 ml-1 transition-transform duration-200"></i>
+                            </span>
+                        </button>
+                        <div id="product-menu" class="hidden bg-mondelez-blue pt-1 pb-1 rounded-lg shadow-xl min-w-[200px] z-10 top-0 left-full border border-mondelez-blue/50 absolute">
+                            <a href="#" data-page="catalog" class="nav-link-sub" onclick="showPage('catalog', this, true)">Digital Catalog</a>
+                            <a href="#" data-page="certificates" class="nav-link-sub" onclick="showPage('certificates', this, true)">Certificates</a>
+                        </div>
+                    </div>
+
+                    <!-- 4. Governance & Support (Dropdown) -->
+                    <div class="relative">
+                        <button id="support-btn" onclick="toggleDropdown(event, this, 'support-menu')" class="nav-link-item flex items-center w-full">
+                            <i data-lucide="clipboard-list" class="w-5 h-5 mr-3"></i>
+                            <span class="nav-text flex justify-between items-center w-full">
+                                Governance & Support
+                                <i data-lucide="chevron-down" class="w-4 h-4 ml-1 transition-transform duration-200"></i>
+                            </span>
+                        </button>
+                        <div id="support-menu" class="absolute hidden bg-mondelez-blue pt-1 pb-1 rounded-lg shadow-xl min-w-[200px] z-10 top-0 left-full border border-mondelez-blue/50">
+                            <a href="#" data-page="sustainability" class="nav-link-sub" onclick="showPage('sustainability', this, true)">Sustainability Site</a>
+                            <a href="#" data-page="raci" class="nav-link-sub" onclick="showPage('raci', this, true)">RACI Matrix</a>
+                            <a href="#" data-page="contacts" class="nav-link-sub" onclick="showPage('contacts', this, true)">Key Contacts</a>
+                            <a href="#" data-page="templates" class="nav-link-sub" onclick="showPage('templates', this, true)">Response Templates</a>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+            
+            <!-- AI Chatbot Toggle (Bottom of Sidebar) -->
+            <button id="chatbot-button" class="bg-mondelez-yellow text-mondelez-blue font-bold py-3 px-4 rounded-lg shadow-lg hover:opacity-90 transition-colors flex items-center justify-center mt-6 w-full" onclick="toggleChatbot()">
+                <i data-lucide="bot" class="w-5 h-5 mr-2"></i>
+                <span class="nav-text">AI Assistant</span>
+            </button>
+        </div>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-white">
+            <!-- Fixed Header -->
+            <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm sticky top-0 z-10">
+                <h1 id="page-title" class="text-2xl font-semibold text-mondelez-blue">Dashboard</h1>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-500">Welcome, Mondelez Partner!</span>
+                    <i data-lucide="user" class="w-6 h-6 text-mondelez-blue"></i>
+                </div>
+            </header>
+
+            <!-- Page Content Views -->
+            <div id="content-container" class="p-6 page-content">
+                <!-- Content will be injected here -->
+            </div>
+        </main>
+
+        <!-- AI Chatbot Overlay (Full-Page Modal) -->
+        <!-- CHANGES: Added flex, items-center, justify-center to center the modal content -->
+        <div id="chatbot-overlay" class="fixed inset-0 bg-black bg-opacity-50 hidden z-30 flex items-center justify-center" onclick="toggleChatbot()">
+            <!-- CHANGES: Set explicit, large size for the centered modal -->
+            <div class="bg-white rounded-xl shadow-2xl flex flex-col w-[95%] max-w-4xl h-[95vh]" onclick="event.stopPropagation()">
+                <div class="bg-mondelez-blue text-white p-4 flex justify-between items-center rounded-t-xl">
+                    <div class="flex items-center">
+                        <i data-lucide="bot" class="w-6 h-6 mr-2 text-mondelez-yellow"></i>
+                        <h2 class="text-xl font-bold">Mondelez AI Assistant</h2>
+                    </div>
+                    <button class="text-white hover:text-mondelez-yellow p-1" onclick="toggleChatbot()">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                <div class="chat-container">
+                    <!-- Messages Area -->
+                    <div id="chat-messages" class="chat-messages p-4 bg-gray-50">
+                        <div class="p-3 bg-mondelez-blue text-white rounded-lg mb-2 max-w-xs self-start">
+                            Hello! I'm your Mondelez AI Assistant. How can I help you with product information, policies, or process guides today?
+                        </div>
+                    </div>
+
+                    <!-- Input Area -->
+                    <div class="p-4 border-t border-gray-200 bg-white">
+                        <div id="loading-indicator" class="text-mondelez-blue text-sm mb-2 hidden">
+                            <span class="animate-pulse">Assistant is thinking...</span>
+                        </div>
+                        <div class="flex">
+                            <input type="text" id="chat-input" class="flex-1 p-3 border border-gray-300 rounded-l-lg focus:ring-mondelez-yellow focus:border-mondelez-yellow" placeholder="Ask a question..." onkeydown="if(event.key === 'Enter') sendMessage()">
+                            <button id="send-button" class="bg-mondelez-blue text-white p-3 rounded-r-lg hover:bg-mondelez-blue/90 disabled:opacity-50 transition-colors" onclick="sendMessage()">
+                                Send
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const contentContainer = document.getElementById('content-container');
+        const pageTitle = document.getElementById('page-title');
+        const chatbotOverlay = document.getElementById('chatbot-overlay');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const sendButton = document.getElementById('send-button');
+        
+        // Sidebar elements for collapse logic
+        const sidebar = document.getElementById('sidebar');
+        const logoText = document.getElementById('logo-text');
+        const sidebarToggleIcon = document.getElementById('sidebar-toggle-icon');
+        const navTexts = document.querySelectorAll('.nav-text');
+        const chatbotButton = document.getElementById('chatbot-button');
+        
+
+        // --- Simulated API Configuration ---
+        const API_MODEL = 'gemini-2.5-flash-preview-09-2025';
+        const apiKey = ""; // Canvas environment will provide the key
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${API_MODEL}:generateContent?key=${apiKey}`;
+        const SYSTEM_PROMPT = "You are a friendly, knowledgeable assistant for the Mondelez International Partner Portal. Provide concise, professional, and helpful answers based on the company's initiatives and products. If you use external information, ensure you cite the sources.";
+        // --- END API Configuration ---
+        
+        /**
+         * Toggles the collapse state of the sidebar.
+         */
+        function toggleSidebar() {
+            const isExpanded = sidebar.classList.contains('w-64');
+            const navItems = document.querySelectorAll('.nav-link-item');
+            
+            // 1. Toggle Sidebar Width
+            sidebar.classList.toggle('w-64');
+            sidebar.classList.toggle('w-20');
+            
+            // 2. Toggle Header/Logo visibility and padding
+            logoText.classList.toggle('hidden');
+            
+            // 3. Toggle Navigation Text visibility and icon alignment
+            navTexts.forEach(span => {
+                 // Check if the span is the toggle button's text, only hide/show the general text
+                if (span.closest('#chatbot-button')) return;
+                span.classList.toggle('hidden');
+            });
+            
+            navItems.forEach(link => {
+                const icon = link.querySelector('i:not(.transition-transform)'); // Select main icon, excluding chevron
+                if (icon) {
+                    if (isExpanded) {
+                        icon.classList.remove('mr-3');
+                        icon.classList.add('mx-auto');
+                    } else {
+                        icon.classList.add('mr-3');
+                        icon.classList.remove('mx-auto');
+                    }
+                }
+            });
+
+            // 4. Toggle Chatbot Button content/styling
+            const chatbotText = chatbotButton.querySelector('.nav-text');
+            const chatbotIcon = chatbotButton.querySelector('i');
+            
+            if (isExpanded) {
+                // Collapse state: hide text, center icon, make button square
+                if (chatbotText) chatbotText.classList.add('hidden');
+                if (chatbotIcon) chatbotIcon.classList.remove('mr-2');
+                chatbotButton.classList.remove('w-full', 'px-4');
+                chatbotButton.classList.add('w-12', 'h-12', 'p-1', 'mx-auto');
+            } else {
+                // Expand state: show text, add margin back, make button wide
+                if (chatbotText) chatbotText.classList.remove('hidden');
+                if (chatbotIcon) chatbotIcon.classList.add('mr-2');
+                chatbotButton.classList.add('w-full', 'px-4');
+                chatbotButton.classList.remove('w-12', 'h-12', 'p-1', 'mx-auto');
+            }
+
+
+            // 5. Rotate Toggle Icon
+            sidebarToggleIcon.classList.toggle('rotate-180');
+            
+            // 6. Close any open dropdown menus (as they behave awkwardly when sidebar resizes)
+            document.querySelectorAll('#vertical-nav .relative > div').forEach(menu => {
+                menu.classList.add('hidden');
+                const chevron = menu.previousElementSibling.querySelector('.nav-text i');
+                if (chevron) chevron.classList.remove('rotate-180');
+            });
+        }
+
+
+        /**
+         * Toggles the visibility of a dropdown menu, handles safe closure, and positions it correctly for the vertical sidebar.
+         * @param {Event} event - The click event.
+         * @param {HTMLElement} parentButton - The button element that was clicked.
+         * @param {string} menuId - The ID of the dropdown menu div.
+         */
+        function toggleDropdown(event, parentButton, menuId) {
+            event.stopPropagation();
+            const targetMenu = document.getElementById(menuId);
+            
+            if (!targetMenu || !parentButton) {
+                console.error(`Missing menu elements for ID ${menuId}.`);
+                return;
+            }
+
+            const chevron = parentButton.querySelector('.nav-text i');
+
+            // Close all other dropdowns safely
+            document.querySelectorAll('#vertical-nav .relative').forEach(container => {
+                const menu = container.querySelector('div[id$="-menu"]');
+                const iterationChevron = container.querySelector('.nav-text i');
+
+                if (menu && menu.id !== menuId) {
+                    menu.classList.add('hidden');
+                    if (iterationChevron) iterationChevron.classList.remove('rotate-180');
+                }
+            });
+
+            // Toggle target menu visibility and rotate its chevron safely
+            targetMenu.classList.toggle('hidden');
+            if (chevron) {
+                 chevron.classList.toggle('rotate-180');
+            }
+        }
+
+        /**
+         * Closes all dropdowns when clicking outside.
+         */
+        document.addEventListener('click', function(event) {
+            const isClickInsideNav = document.getElementById('sidebar').contains(event.target);
+            if (!isClickInsideNav) {
+                // Close all dropdowns safely
+                document.querySelectorAll('#vertical-nav .relative').forEach(container => {
+                    const menu = container.querySelector('div[id$="-menu"]');
+                    const chevron = container.querySelector('.nav-text i');
+                    
+                    if (menu) {
+                        menu.classList.add('hidden');
+                        if (chevron) chevron.classList.remove('rotate-180');
+                    }
+                });
+            }
+        });
+        
+
+        /**
+         * Simulates an API call with exponential backoff.
+         * ... (API functions omitted for brevity, logic remains the same)
+         */
+        async function fetchWithBackoff(payload, retries = 0) {
+            const MAX_RETRIES = 5;
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.status === 429 && retries < MAX_RETRIES) {
+                    const delay = Math.pow(2, retries) * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return fetchWithBackoff(payload, retries + 1);
+                }
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.statusText}`);
+                }
+
+                return response.json();
+
+            } catch (error) {
+                console.error("API Call failed after retries:", error);
+                throw new Error("Could not connect to the AI service. Please try again later.");
+            }
+        }
+
+        async function sendMessage() {
+            const userQuery = chatInput.value.trim();
+            if (!userQuery) return;
+            addMessage(userQuery, 'user');
+            chatInput.value = '';
+            
+            sendButton.disabled = true;
+            chatInput.disabled = true;
+            loadingIndicator.classList.remove('hidden');
+
+            try {
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    tools: [{ "google_search": {} }],
+                    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+                };
+                const result = await fetchWithBackoff(payload);
+                const candidate = result.candidates?.[0];
+                let responseText = "Sorry, I couldn't generate a response. Please try rephrasing your question.";
+                let sources = [];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    responseText = candidate.content.parts[0].text;
+                    const groundingMetadata = candidate.groundingMetadata;
+                    if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                        sources = groundingMetadata.groundingAttributions
+                            .map(attribution => ({ uri: attribution.web?.uri, title: attribution.web?.title }))
+                            .filter(source => source.uri && source.title);
+                    }
+                }
+                addMessage(responseText, 'assistant', sources);
+            } catch (error) {
+                console.error("Chatbot Error:", error);
+                addMessage("An unexpected error occurred: " + error.message, 'assistant');
+            } finally {
+                sendButton.disabled = false;
+                chatInput.disabled = false;
+                loadingIndicator.classList.add('hidden');
+                chatInput.focus();
+            }
+        }
+        
+        function addMessage(text, sender, sources = []) {
+            const messageDiv = document.createElement('div');
+            
+            if (sender === 'user') {
+                messageDiv.className = 'p-3 bg-mondelez-yellow text-mondelez-blue rounded-lg mb-4 max-w-xs self-end ml-auto shadow-md';
+            } else { // assistant
+                messageDiv.className = 'p-3 bg-mondelez-blue text-white rounded-lg mb-4 max-w-xs self-start shadow-md';
+            }
+
+            let formattedText = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="underline hover:text-mondelez-yellow">$1</a>');
+            
+            formattedText = formattedText.split('\n').map(line => {
+                if (line.trim().startsWith('* ') || line.trim().startsWith('- ')) {
+                    return `<li>${line.substring(2).trim()}</li>`;
+                }
+                return line;
+            }).join('<br>');
+            
+            messageDiv.innerHTML = formattedText;
+
+            if (sources.length > 0) {
+                const sourceList = document.createElement('div');
+                sourceList.className = 'mt-2 pt-2 border-t border-mondelez-yellow text-xs text-yellow-200';
+                sourceList.innerHTML = '<strong>Sources:</strong><ul>' + 
+                    sources.map((src, index) => `<li><a href="${src.uri}" target="_blank" class="hover:underline">${src.title}</a></li>`).join('') + 
+                    '</ul>';
+                messageDiv.appendChild(sourceList);
+            }
+
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function toggleChatbot() {
+            const isOpen = chatbotOverlay.classList.contains('hidden');
+            if (isOpen) {
+                chatbotOverlay.classList.remove('hidden');
+                chatInput.focus();
+            } else {
+                chatbotOverlay.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Manages the content view and navigation state.
+         * @param {string} pageKey - The key corresponding to the page content function.
+         * @param {HTMLElement} navItem - The clicked navigation element (<a> or <button>).
+         * @param {boolean} isSubLink - True if the item is a sub-link.
+         */
+        function showPage(pageKey, navItem, isSubLink = false) {
+            
+            // 1. Clear Active State on ALL links and sub-links
+            document.querySelectorAll('.nav-link-item').forEach(link => {
+                link.classList.remove('active-link');
+            });
+            document.querySelectorAll('.nav-link-sub').forEach(link => {
+                link.classList.remove('active-link-sub');
+            });
+
+            // 2. Set Active State on the clicked item
+            if (navItem) {
+                if (isSubLink) {
+                    navItem.classList.add('active-link-sub');
+                    // Find and activate the parent top-level button link
+                    const topButton = navItem.closest('.relative').querySelector('.nav-link-item');
+                    if (topButton) {
+                        topButton.classList.add('active-link');
+                    }
+                } else {
+                    // For the single Dashboard link, just activate it directly
+                    navItem.classList.add('active-link');
+                }
+            }
+            
+            // 3. Close all dropdowns after selection
+            document.querySelectorAll('#vertical-nav .relative').forEach(container => {
+                const menu = container.querySelector('div[id$="-menu"]');
+                const chevron = container.querySelector('.nav-text i');
+                
+                if (menu) {
+                    menu.classList.add('hidden');
+                    if (chevron) chevron.classList.remove('rotate-180');
+                }
+            });
+
+            // 4. Update content
+            const pageConfig = pageContent[pageKey];
+            if (pageConfig) {
+                pageTitle.textContent = pageConfig.title;
+                contentContainer.innerHTML = pageConfig.html;
+            } else {
+                pageTitle.textContent = "Page Not Found";
+                contentContainer.innerHTML = `<div class="p-8 text-center text-gray-500">The requested page does not exist.</div>`;
+            }
+        }
+
+        // --- Page Content Definitions ---
+        const pageContent = {
+            'dashboard': {
+                title: 'Partner Dashboard',
+                html: `
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Metric Card 1 -->
+                        <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-mondelez-blue">
+                            <h3 class="text-lg font-semibold text-gray-600">Q4 Sales Performance</h3>
+                            <p class="text-4xl font-bold text-mondelez-blue mt-2">+12.4%</p>
+                            <p class="text-sm text-gray-500 mt-1">YoY Growth (Global)</p>
+                        </div>
+                        <!-- Metric Card 2 -->
+                        <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-mondelez-yellow">
+                            <h3 class="text-lg font-semibold text-gray-600">Compliance Rate</h3>
+                            <p class="text-4xl font-bold text-mondelez-blue mt-2">98.5%</p>
+                            <p class="text-sm text-gray-500 mt-1">Last Audit Score</p>
+                        </div>
+                        <!-- Metric Card 3 -->
+                        <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-mondelez-blue">
+                            <h3 class="text-lg font-semibold text-gray-600">New Products</h3>
+                            <p class="text-4xl font-bold text-mondelez-blue mt-2">3</p>
+                            <p class="text-sm text-gray-500 mt-1">Launched this month (Q4)</p>
+                        </div>
+
+                        <!-- Quick Actions/Announcements -->
+                        <div class="lg:col-span-3 bg-white p-6 rounded-xl shadow-lg">
+                            <h2 class="text-xl font-semibold mb-4 text-mondelez-blue">Quick Announcements</h2>
+                            <ul class="space-y-3">
+                                <li class="p-3 bg-gray-50 rounded-lg border-l-2 border-mondelez-blue flex justify-between items-center">
+                                    <span class="font-medium">Mandatory: 2024 Sustainability Training now available.</span>
+                                    <button class="text-sm text-mondelez-blue hover:underline">View</button>
+                                </li>
+                                <li class="p-3 bg-gray-50 rounded-lg border-l-2 border-mondelez-yellow flex justify-between items-center">
+                                    <span class="font-medium">New pricing structure effective Jan 1st. See Digital Catalog.</span>
+                                    <button class="text-sm text-mondelez-blue hover:underline">View</button>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                `
+            },
+            'briefing': {
+                title: 'Briefing Room: Strategy & Updates',
+                html: `
+                    <div class="space-y-6">
+                        <p class="text-lg text-gray-600">Access the latest strategic direction, market insights, and executive presentations.</p>
+                        
+                        <div class="bg-white p-6 rounded-xl shadow-lg">
+                            <h3 class="text-xl font-semibold text-mondelez-blue mb-4">Q4 2023 Performance Review</h3>
+                            <p class="text-gray-700 mb-3">A deep dive into our global market share and category growth drivers, focusing on the future of snacking.</p>
+                            <div class="flex space-x-4">
+                                <button class="bg-mondelez-blue text-white px-4 py-2 rounded-lg hover:bg-mondelez-blue/90">Download Presentation (PDF)</button>
+                                <button class="border border-mondelez-blue text-mondelez-blue px-4 py-2 rounded-lg hover:bg-gray-100">Watch Executive Summary</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-xl shadow-lg">
+                            <h3 class="text-xl font-semibold text-mondelez-blue mb-4">2024 Innovation Pipeline</h3>
+                            <p class="text-gray-700 mb-3">Details on upcoming product launches for *Oreo*, *Cadbury*, and *Ritz* brands, including target demographics and launch timelines.</p>
+                            <button class="bg-mondelez-blue text-white px-4 py-2 rounded-lg hover:bg-mondelez-blue/90">View Product Roadmap</button>
+                        </div>
+                    </div>
+                `
+            },
+            'engagement': {
+                title: 'Partner Engagement Platform',
+                html: `
+                    <div class="space-y-6">
+                        <p class="text-lg text-gray-600">Connect with Mondelez teams, register for events, and access training modules.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- Card 1: Training -->
+                            <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-mondelez-blue">
+                                <i data-lucide="graduation-cap" class="w-8 h-8 text-mondelez-blue mb-3"></i>
+                                <h4 class="text-lg font-bold mb-2">Training Modules</h4>
+                                <p class="text-sm text-gray-600">Complete certifications on product handling and brand guidelines.</p>
+                                <button class="mt-4 text-mondelez-blue hover:underline text-sm">Start Learning</button>
+                            </div>
+                            <!-- Card 2: Events -->
+                            <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-mondelez-yellow">
+                                <i data-lucide="calendar" class="w-8 h-8 text-mondelez-yellow mb-3"></i>
+                                <h4 class="text-lg font-bold mb-2">Events & Webinars</h4>
+                                <p class="text-sm text-gray-600">Register for the Global Partner Summit and upcoming product webinars.</p>
+                                <button class="mt-4 text-mondelez-blue hover:underline text-sm">View Calendar</button>
+                            </div>
+                            <!-- Card 3: Feedback -->
+                            <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-mondelez-blue">
+                                <i data-lucide="message-square" class="w-8 h-8 text-mondelez-blue mb-3"></i>
+                                <h4 class="text-lg font-bold mb-2">Feedback Center</h4>
+                                <p class="text-sm text-gray-600">Submit suggestions or report platform issues directly to the IT team.</p>
+                                <button class="mt-4 text-mondelez-blue hover:underline text-sm">Submit Feedback</button>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            'catalog': {
+                title: 'Digital Product Catalog',
+                html: `
+                    <div class="space-y-6">
+                        <p class="text-lg text-gray-600">Search and download product specifications, pricing sheets, and high-resolution marketing assets.</p>
+                        
+                        <!-- Search Bar -->
+                        <div class="flex space-x-3">
+                            <input type="text" placeholder="Search by SKU, Brand, or Category..." class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-mondelez-yellow focus:border-mondelez-yellow">
+                            <button class="bg-mondelez-blue text-white px-6 py-3 rounded-lg hover:bg-mondelez-blue/90 flex items-center">
+                                <i data-lucide="search" class="w-5 h-5 mr-2"></i> Search
+                            </button>
+                        </div>
+
+                        <!-- Catalog Grid Mockup -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+                            <div class="bg-white p-4 rounded-xl shadow hover:shadow-lg transition">
+                                <img src="https://placehold.co/150x100/fec85a/4f2170?text=Oreo" onerror="this.onerror=null;this.src='https://placehold.co/150x100/fec85a/4f2170?text=Oreo';" class="w-full h-auto rounded-md mb-2">
+                                <h5 class="font-semibold">Oreo Original (Family Pack)</h5>
+                                <p class="text-xs text-gray-500">SKU: MDZ12345</p>
+                                <button class="text-xs text-mondelez-blue mt-2 hover:underline">View Details</button>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl shadow hover:shadow-lg transition">
+                                <img src="https://placehold.co/150x100/a8dadc/4f2170?text=Cadbury" onerror="this.onerror=null;this.src='https://placehold.co/150x100/a8dadc/4f2170?text=Cadbury';" class="w-full h-auto rounded-md mb-2">
+                                <h5 class="font-semibold">Cadbury Dairy Milk (300g)</h5>
+                                <p class="text-xs text-gray-500">SKU: MDZ67890</p>
+                                <button class="text-xs text-mondelez-blue mt-2 hover:underline">View Details</button>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl shadow hover:shadow-lg transition">
+                                <img src="https://placehold.co/150x100/c77dff/4f2170?text=Ritz" onerror="this.onerror=null;this.src='https://placehold.co/150x100/c77dff/4f2170?text=Ritz';" class="w-full h-auto rounded-md mb-2">
+                                <h5 class="font-semibold">Ritz Crackers (Value Box)</h5>
+                                <p class="text-xs text-gray-500">SKU: MDZ11223</p>
+                                <button class="text-xs text-mondelez-blue mt-2 hover:underline">View Details</button>
+                            </div>
+                            <!-- Add more items... -->
+                        </div>
+                    </div>
+                `
+            },
+            'certificates': {
+                title: 'Quality & Compliance Certificates',
+                html: `
+                    <div class="space-y-6">
+                        <p class="text-lg text-gray-600">Download essential documents including ISO certifications, safety standards, and regional compliance reports.</p>
+                        
+                        <div class="bg-white p-6 rounded-xl shadow-lg">
+                            <h3 class="text-xl font-semibold text-mondelez-blue mb-4">Latest Certification Downloads</h3>
+                            <ul class="space-y-4">
+                                <li class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <span class="font-medium">ISO 9001:2015 Quality Management (2024)</span>
+                                    <button class="text-mondelez-blue hover:text-mondelez-blue/90 flex items-center text-sm">
+                                        <i data-lucide="download" class="w-4 h-4 mr-1"></i> Download
+                                    </button>
+                                </li>
+                                <li class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <span class="font-medium">HACCP Food Safety Certificate (Global)</span>
+                                    <button class="text-mondelez-blue hover:text-mondelez-blue/90 flex items-center text-sm">
+                                        <i data-lucide="download" class="w-4 h-4 mr-1"></i> Download
+                                    </button>
+                                </li>
+                                <li class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <span class="font-medium">EU Region Supplier Compliance Report Q3 2024</span>
+                                    <button class="text-mondelez-blue hover:text-mondelez-blue/90 flex items-center text-sm">
+                                        <i data-lucide="download" class="w-4 h-4 mr-1"></i> Download
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                `
+            },
+            'sustainability': {
+                title: 'Sustainability & ESG Site',
+                html: `
+                    <div class="space-y-6">
+                        <p class="text-lg text-gray-600">Explore our 'Snacking Made Right' strategy, reporting on environmental, social, and governance (ESG) commitments.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Cocoa Life Card -->
+                            <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-green-600">
+                                <h3 class="text-xl font-semibold text-green-700 mb-2">Cocoa Life Program</h3>
+                                <p class="text-gray-700 mb-3">Learn about our commitment to sustainable and ethical cocoa sourcing, empowering farming communities.</p>
+                                <button class="text-mondelez-blue hover:underline text-sm font-medium">Read Program Details</button>
+                            </div>
+                            <!-- Net Zero Card -->
+                            <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-mondelez-blue">
+                                <h3 class="text-xl font-semibold text-mondelez-blue mb-2">Net Zero Goals</h3>
+                                <p class="text-gray-700 mb-3">Our path to achieving net-zero greenhouse gas emissions across our value chain by 2050.</p>
+                                <button class="text-mondelez-blue hover:underline text-sm font-medium">View Roadmap</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-xl shadow-lg">
+                            <h3 class="text-xl font-semibold text-mondelez-blue mb-4">Latest ESG Report</h3>
+                            <p class="text-gray-700">Download the full 2023 ESG Report detailing progress on climate action, sustainable packaging, and diversity & inclusion.</p>
+                            <button class="mt-4 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">Download Full Report (2023)</button>
+                        </div>
+                    </div>
+                `
+            },
+            'raci': {
+                title: 'RACI Matrix & Process Ownership',
+                html: `
+                    <div class="space-y-6">
+                        <p class="text-lg text-gray-600">Reference the Responsible, Accountable, Consulted, and Informed (RACI) matrix for key cross-functional processes.</p>
+                        
+                        <div class="overflow-x-auto bg-white p-6 rounded-xl shadow-lg">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-mondelez-blue text-white">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Process/Activity</th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Partner (e.g., Distributor)</th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Mondelez Sales</th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Mondelez Logistics</th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Mondelez Finance</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap font-medium">Order Submission</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-mondelez-blue font-bold">R / A</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">C</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">I</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">I</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap font-medium">Inventory Forecast</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">R</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-mondelez-blue font-bold">A / C</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">C</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">I</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap font-medium">New Product Onboarding</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">I</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-mondelez-blue font-bold">A</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">C</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">R</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-sm text-gray-500">* Key: R=Responsible, A=Accountable, C=Consulted, I=Informed. Consult Key Contacts for ownership questions.</p>
+                    </div>
+                `
+            },
+            'contacts': {
+                title: 'Key Contacts Directory',
+                html: `
+                    <div class="space-y-6">
+                        <p class="text-lg text-gray-600">Find the right people to contact for various operational and strategic issues.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Contact Card 1 -->
+                            <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-mondelez-yellow">
+                                <h4 class="text-xl font-bold text-mondelez-blue mb-2">Logistics & Shipping</h4>
+                                <p class="text-gray-700"><strong>Contact:</strong> Sarah Chen</p>
+                                <p class="text-gray-700"><strong>Email:</strong> logistics.support@mondelez.com</p>
+                                <p class="text-gray-700"><strong>Phone:</strong> +1 (555) 123-4567</p>
+                                <p class="text-sm text-gray-500 mt-2">Use this for order tracking, delivery issues, and warehousing inquiries.</p>
+                            </div>
+                            <!-- Contact Card 2 -->
+                            <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-mondelez-blue">
+                                <h4 class="text-xl font-bold text-mondelez-blue mb-2">Finance & Billing</h4>
+                                <p class="text-gray-700"><strong>Contact:</strong> David Ramirez</p>
+                                <p class="text-gray-700"><strong>Email:</strong> accounts.payable@mondelez.com</p>
+                                <p class="text-gray-700"><strong>Phone:</strong> +1 (555) 987-6543</p>
+                                <p class="text-sm text-gray-500 mt-2">Use this for invoice discrepancies, payment status, and credit terms.</p>
+                            </div>
+                            <!-- Contact Card 3 -->
+                            <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-mondelez-yellow">
+                                <h4 class="text-xl font-bold text-mondelez-blue mb-2">IT & Portal Support</h4>
+                                <p class="text-gray-700"><strong>Contact:</strong> Global Helpdesk</p>
+                                <p class="text-gray-700"><strong>Email:</strong> partner.helpdesk@mondelez.com</p>
+                                <p class="text-gray-700"><strong>Phone:</strong> +1 (555) 111-2222</p>
+                                <p class="text-sm text-gray-500 mt-2">For portal access, technical issues, or login problems.</p>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            'templates': {
+                title: 'Standard Response Templates',
+                html: `
+                    <div class="space-y-6">
+                        <p class="text-lg text-gray-600">Pre-approved response templates for common customer and media inquiries, ensuring consistent brand messaging.</p>
+                        
+                        <div class="bg-white p-6 rounded-xl shadow-lg">
+                            <h3 class="text-xl font-semibold text-mondelez-blue mb-4">Template Library</h3>
+                            
+                            <details class="group border-b border-gray-200 py-3">
+                                <summary class="flex justify-between items-center cursor-pointer font-medium text-lg text-mondelez-blue hover:text-mondelez-blue/90">
+                                    Response to "Product Out of Stock"
+                                    <span class="transform transition-transform duration-200 group-open:rotate-180">
+                                        <i data-lucide="chevron-down" class="w-5 h-5"></i>
+                                    </span>
+                                </summary>
+                                <div class="mt-2 text-gray-700 p-2 bg-gray-50 rounded-md text-sm">
+                                    <p>Dear [Customer Name], thank you for your order. We are temporarily out of stock of [Product Name] due to [brief reason]. We anticipate new stock on [Date]. We apologize for the inconvenience and are working hard to fulfill your request. A notification will be sent immediately upon restocking.</p>
+                                    <button class="mt-3 text-xs text-mondelez-yellow bg-mondelez-blue px-3 py-1 rounded-full" onclick="document.execCommand('copy')">Copy Template</button>
+                                </div>
+                            </details>
+
+                            <details class="group border-b border-gray-200 py-3">
+                                <summary class="flex justify-between items-center cursor-pointer font-medium text-lg text-mondelez-blue hover:text-mondelez-blue/90">
+                                    Response to "Sustainability Inquiry"
+                                    <span class="transform transition-transform duration-200 group-open:rotate-180">
+                                        <i data-lucide="chevron-down" class="w-5 h-5"></i>
+                                    </span>
+                                </summary>
+                                <div class="mt-2 text-gray-700 p-2 bg-gray-50 rounded-md text-sm">
+                                    <p>Thank you for asking about our commitment to sustainability. Mondelez International is dedicated to 'Snacking Made Right.' Our key initiatives, including the Cocoa Life program and our net-zero goals, are detailed on our official Sustainability Site: [Link to Sustainability Site]. We are committed to ethical sourcing and reducing our environmental footprint.</p>
+                                    <button class="mt-3 text-xs text-mondelez-yellow bg-mondelez-blue px-3 py-1 rounded-full" onclick="document.execCommand('copy')">Copy Template</button>
+                                </div>
+                            </details>
+
+                            <details class="group border-b border-gray-200 py-3">
+                                <summary class="flex justify-between items-center cursor-pointer font-medium text-lg text-mondelez-blue hover:text-mondelez-blue/90">
+                                    Response to "Pricing Discrepancy"
+                                    <span class="transform transition-transform duration-200 group-open:rotate-180">
+                                        <i data-lucide="chevron-down" class="w-5 h-5"></i>
+                                    </span>
+                                </summary>
+                                <div class="mt-2 text-gray-700 p-2 bg-gray-50 rounded-md text-sm">
+                                    <p>Thank you for bringing this to our attention. Pricing for [Product Name] is governed by the agreement dated [Date]. For a full review of your current pricing tier or to resolve a discrepancy, please contact our Finance & Billing team directly at accounts.payable@mondelez.com or call +1 (555) 987-6543.</p>
+                                    <button class="mt-3 text-xs text-mondelez-yellow bg-mondelez-blue px-3 py-1 rounded-full" onclick="document.execCommand('copy')">Copy Template</button>
+                                </div>
+                            </details>
+
+                        </div>
+                    </div>
+                `
+            },
+        };
+
+        // Initialize the app on load
+        window.onload = () => {
+            // Check for initial page and load dashboard if none is set
+            const initialPage = document.querySelector('.nav-link-item[data-page="dashboard"]');
+            showPage('dashboard', initialPage);
+        };
+    </script>
+</body>
+</html>
