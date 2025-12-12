@@ -57,6 +57,13 @@
         .chat-messages::-webkit-scrollbar { width: 8px; }
         .chat-messages::-webkit-scrollbar-thumb { background-color: #4f2170; border-radius: 4px; }
         .chat-messages::-webkit-scrollbar-track { background-color: #e5e7eb; }
+
+        .sme-action-btn {
+            @apply bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold hover:bg-green-600 transition-colors;
+        }
+        .sme-approve-btn {
+            @apply bg-red-500 text-white px-3 py-1 rounded-full text-xs font-semibold hover:bg-red-600 transition-colors;
+        }
     </style>
     <script>
         tailwind.config = {
@@ -72,8 +79,8 @@
     </script>
     <!-- Icon Library (Lucide) -->
     <script type="module">
-        import { createIcons, Search, LayoutDashboard, Briefcase, Users, BookOpen, Award, Globe, ClipboardList, Phone, FileText, Bot, ChevronsLeft, GraduationCap, Calendar, MessageSquare, Download, ChevronDown, User, Send, ListOrdered, FileSearch, HelpCircle, UserCheck } from 'https://cdn.jsdelivr.net/npm/lucide@latest/dist/esm/lucide.js';
-        createIcons({ icons: { Search, LayoutDashboard, Briefcase, Users, BookOpen, Award, Globe, ClipboardList, Phone, FileText, Bot, ChevronsLeft, GraduationCap, Calendar, MessageSquare, Download, ChevronDown, User, Send, ListOrdered, FileSearch, HelpCircle, UserCheck } });
+        import { createIcons, Search, LayoutDashboard, Briefcase, Users, BookOpen, Award, Globe, ClipboardList, Phone, FileText, Bot, ChevronsLeft, GraduationCap, Calendar, MessageSquare, Download, ChevronDown, User, Send, ListOrdered, FileSearch, HelpCircle, UserCheck, ScrollText } from 'https://cdn.jsdelivr.net/npm/lucide@latest/dist/esm/lucide.js';
+        createIcons({ icons: { Search, LayoutDashboard, Briefcase, Users, BookOpen, Award, Globe, ClipboardList, Phone, FileText, Bot, ChevronsLeft, GraduationCap, Calendar, MessageSquare, Download, ChevronDown, User, Send, ListOrdered, FileSearch, HelpCircle, UserCheck, ScrollText } });
     </script>
 </head>
 
@@ -125,8 +132,10 @@
                         </button>
                         <div id="enquiry-menu" class="absolute hidden bg-mondelez-blue pt-1 pb-1 rounded-lg shadow-xl min-w-[200px] z-10 top-0 left-full border border-mondelez-blue/50">
                             <a href="#" data-page="new_enquiry" class="nav-link-sub" onclick="showPage('new_enquiry', this, true)">New Enquiry / Submission</a>
-                            <a href="#" data-page="status_workflow" class="nav-link-sub" onclick="showPage('status_workflow', this, true)">Status & Workflow</a>
+                            <a href="#" data-page="status_workflow" class="nav-link-sub" onclick="showPage('status_workflow', this, true)">Status & Tracking (My Enquiries)</a>
                             <a href="#" data-page="enquiry_examples" class="nav-link-sub" onclick="showPage('enquiry_examples', this, true)">Enquiry Matrix Examples</a>
+                             <!-- NEW/RESTRICTED LINK: Only visible for SME/Internal roles -->
+                            <a href="#" data-page="enquiry_log" id="enquiry-log-link" class="nav-link-sub hidden" onclick="showPage('enquiry_log', this, true)">Enquiry Log (SME Full History)</a>
                         </div>
                     </div>
 
@@ -176,7 +185,7 @@
             <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm sticky top-0 z-10">
                 <h1 id="page-title" class="text-2xl font-semibold text-mondelez-blue">Dashboard</h1>
                 <div class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-500">Logged in as: <span id="header-user-role">Partner</span></span>
+                    <span class="text-sm text-gray-500">Logged in as: <span id="header-user-role">Partner</span> (<span id="header-user-email">partner@mdlz.com</span>)</span>
                     <i data-lucide="user" class="w-6 h-6 text-mondelez-blue"></i>
                 </div>
             </header>
@@ -243,19 +252,38 @@
         const chatbotButton = document.getElementById('chatbot-button');
         
         let currentRole = 'Partner'; // Default Role
+        let currentUserEmail = 'partner@mdlz.com';
 
         // --- Role Switching Logic ---
         function updateRoleDisplay() {
             const roleDisplay = document.getElementById('user-role-display');
             const headerRoleDisplay = document.getElementById('header-user-role');
+            const headerEmailDisplay = document.getElementById('header-user-email');
             const switchRoleLabel = document.getElementById('switch-role-label');
+            const enquiryLogLink = document.getElementById('enquiry-log-link');
+
+            if (currentRole === 'Partner') {
+                currentUserEmail = 'partner@mdlz.com';
+                // Restrict Partner access to the detailed Enquiry Log
+                if (enquiryLogLink) enquiryLogLink.classList.add('hidden');
+            } else {
+                currentUserEmail = 'sme@mdlz.com';
+                // Allow SME access to the detailed Enquiry Log
+                if (enquiryLogLink) enquiryLogLink.classList.remove('hidden');
+            }
 
             if (roleDisplay) roleDisplay.textContent = currentRole;
             if (headerRoleDisplay) headerRoleDisplay.textContent = currentRole;
+            if (headerEmailDisplay) headerEmailDisplay.textContent = currentUserEmail;
             if (switchRoleLabel) switchRoleLabel.textContent = currentRole === 'Partner' ? 'SME' : 'Partner';
 
-            // Re-render the dashboard to show role-specific content
-            showPage('dashboard', document.querySelector('.nav-link-item[data-page="dashboard"]'));
+            // Re-render the dashboard
+            if (document.getElementById('role-dashboard-content')) {
+                renderDashboardContent();
+            } else {
+                const initialPage = document.querySelector('.nav-link-item[data-page="dashboard"]');
+                showPage('dashboard', initialPage);
+            }
         }
 
         function switchRole() {
@@ -554,12 +582,71 @@
             if (pageConfig) {
                 pageTitle.textContent = pageConfig.title;
                 contentContainer.innerHTML = pageConfig.html;
+                // Re-render dashboard specific content after HTML insertion
+                if (pageKey === 'dashboard') {
+                    renderDashboardContent();
+                }
             } else {
                 pageTitle.textContent = "Page Not Found";
                 contentContainer.innerHTML = `<div class="p-8 text-center text-gray-500">The requested page does not exist.</div>`;
             }
         }
 
+        /**
+         * Renders content specific to the current role on the Dashboard page.
+         */
+        function renderDashboardContent() {
+            const container = document.getElementById('role-dashboard-content');
+            if (!container) return;
+
+            const closedCard = document.getElementById('closed-enquiries-card');
+            const approvalsCard = document.getElementById('pending-approvals-card');
+            
+            let html = '';
+            
+            if (currentRole === 'Partner') {
+                html = `
+                    <div class="bg-mondelez-yellow text-mondelez-blue p-6 rounded-xl shadow-lg flex items-center justify-between">
+                        <div>
+                            <h2 class="text-2xl font-bold">Welcome, Partner! Submit & Track Your Enquiries.</h2>
+                            <p class="mt-1 text-sm">You are logged in as **${currentUserEmail}**. Use the form below or the AI Assistant to log a request.</p>
+                        </div>
+                        <button class="bg-mondelez-blue text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-mondelez-blue/90 transition-colors flex items-center flex-shrink-0" onclick="showPage('new_enquiry', document.getElementById('enquiry-btn'))">
+                            <i data-lucide="send" class="w-5 h-5 mr-2"></i> Submit New Enquiry
+                        </button>
+                    </div>
+                `;
+                // Partner analytics priority
+                if (closedCard) closedCard.classList.remove('hidden');
+                if (approvalsCard) approvalsCard.classList.add('hidden');
+            } else { // SME Mode
+                html = `
+                    <div class="bg-mondelez-blue/90 text-white p-6 rounded-xl shadow-lg border-l-4 border-mondelez-yellow">
+                        <h2 class="text-2xl font-bold">SME Dashboard: Actions & Approvals</h2>
+                        <p class="mt-1 text-sm text-mondelez-yellow">You are logged in as **${currentUserEmail}**. Your priority is actioning assigned tasks and approving complex responses.</p>
+                        <div class="mt-4 flex space-x-4">
+                            <button class="bg-mondelez-yellow text-mondelez-blue font-bold py-2 px-4 rounded-lg hover:opacity-90 transition-colors" onclick="showPage('status_workflow', document.getElementById('enquiry-btn'))">
+                                View Action Queue (4 Pending)
+                            </button>
+                             <button class="bg-white text-mondelez-blue border border-mondelez-blue font-bold py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors" onclick="showPage('enquiry_log', document.getElementById('enquiry-log-link'))">
+                                Access Enquiry Log
+                            </button>
+                        </div>
+                    </div>
+                `;
+                // SME analytics priority
+                if (closedCard) closedCard.classList.add('hidden');
+                if (approvalsCard) approvalsCard.classList.remove('hidden');
+            }
+            
+            container.innerHTML = html;
+            
+            // Re-render Lucide icons injected by JS (needed for dashboard buttons)
+            if (typeof createIcons !== 'undefined') {
+                createIcons({ icons: { Send, UserCheck, LayoutDashboard, Briefcase, Users, BookOpen, Award, Globe, ClipboardList, Phone, FileText, Bot, ChevronsLeft, GraduationCap, Calendar, MessageSquare, Download, ChevronDown, User, Send, ListOrdered, FileSearch, HelpCircle } });
+            }
+        }
+        
         // --- Page Content Definitions ---
         const pageContent = {
             'dashboard': {
@@ -569,23 +656,23 @@
                         <div id="role-dashboard-content"></div>
 
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <!-- Metric Card 1: Open Enquiries (Dynamic) -->
+                            <!-- Metric Card 1: My Open Enquiries (Partner & SME view) -->
                             <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-mondelez-blue">
-                                <h3 class="text-lg font-semibold text-gray-600">Open Enquiries</h3>
+                                <h3 class="text-lg font-semibold text-gray-600">My Open Enquiries</h3>
                                 <p class="text-4xl font-bold text-mondelez-blue mt-2">12</p>
-                                <p class="text-sm text-gray-500 mt-1">Awaiting Resolution</p>
+                                <p class="text-sm text-gray-500 mt-1">Requester/Assigned</p>
                             </div>
-                            <!-- Metric Card 2: Compliance Rate -->
-                            <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-mondelez-yellow">
-                                <h3 class="text-lg font-semibold text-gray-600">Latest Document Compliance</h3>
-                                <p class="text-4xl font-bold text-mondelez-blue mt-2">98.5%</p>
-                                <p class="text-sm text-gray-500 mt-1">Last Audit Score</p>
+                            <!-- Metric Card 2: Recently Closed Enquiries (Partner view) -->
+                            <div id="closed-enquiries-card" class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-green-500">
+                                <h3 class="text-lg font-semibold text-gray-600">Recently Closed</h3>
+                                <p class="text-4xl font-bold text-mondelez-blue mt-2">5</p>
+                                <p class="text-sm text-gray-500 mt-1">Last 7 days</p>
                             </div>
-                            <!-- Metric Card 3: Pending Approvals (SME only) -->
-                            <div id="pending-approvals-card" class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-mondelez-blue">
-                                <h3 class="text-lg font-semibold text-gray-600">Pending Actions</h3>
-                                <p class="text-4xl font-bold text-mondelez-blue mt-2">4</p>
-                                <p class="text-sm text-gray-500 mt-1">Assigned to my role</p>
+                            <!-- Metric Card 3: Pending Approvals (SME view) -->
+                            <div id="pending-approvals-card" class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-mondelez-yellow">
+                                <h3 class="text-lg font-semibold text-gray-600">Pending Approvals</h3>
+                                <p class="text-4xl font-bold text-mondelez-blue mt-2">2</p>
+                                <p class="text-sm text-gray-500 mt-1">Awaiting sign-off</p>
                             </div>
                         </div>
                     </div>
@@ -600,12 +687,8 @@
 
                         <form class="space-y-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Requester Type</label>
-                                <select class="w-full p-3 border border-gray-300 rounded-lg focus:ring-mondelez-yellow focus:border-mondelez-yellow">
-                                    <option>Customer-facing function</option>
-                                    <option>Direct Customer</option>
-                                    <option>Internal Mondelez User</option>
-                                </select>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Requester Email</label>
+                                <input type="text" value="${currentUserEmail}" disabled class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-500">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Primary Type of Request (e.g., FSSC Certificate)</label>
@@ -619,42 +702,53 @@
                                 Submit Enquiry
                             </button>
                         </form>
-                        <p class="text-sm text-gray-500 mt-4">Note: The system will automatically classify this as Basic, Intermediate, or Advanced and route to the Responsible SME (RACI).</p>
+                        <p class="text-sm text-gray-500 mt-4">Note: The system will automatically classify this (Basic, Intermediate, Advanced) and route to the Responsible SME (RACI).</p>
                     </div>
                 `
             },
             'status_workflow': {
-                title: 'Enquiry Status & Workflow',
+                title: 'Enquiry Status & Workflow (Tracking)',
                 html: `
                     <div class="space-y-6">
-                        <p class="text-lg text-gray-600">Track the current status and approval path for all submitted enquiries (High priority for Partner/SME).</p>
+                        <p class="text-lg text-gray-600">Track the current status and approval path for all submitted enquiries.</p>
                         
                         <div class="bg-white p-6 rounded-xl shadow-lg">
-                            <h3 class="text-xl font-semibold text-mondelez-blue mb-4">Enquiry Queue (Showing role-specific view)</h3>
+                            <h3 class="text-xl font-semibold text-mondelez-blue mb-4">Enquiry Queue (Filtered by Role)</h3>
+                            <p class="text-sm text-gray-500 mb-3">
+                                **Partner View:** Shows requests raised by you. 
+                                **SME View:** Shows requests assigned to your action queue or awaiting your approval.
+                            </p>
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
                                         <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">ID</th>
                                         <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Request Summary</th>
-                                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Classification</th>
-                                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Current Status</th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Status / Classification</th>
                                         <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Actioner / Approver</th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap">MDLZ-001</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">Vegan certificate needed (SKU 12345)</td>
-                                        <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Intermediate</span></td>
-                                        <td class="px-6 py-4 whitespace-nowrap">Awaiting SME Response (SARA)</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">SARA (Responsible)</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">MDLZ-003</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">Halal cert needed for product X</td>
+                                        <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Basic - Awaiting Automated Response</span></td>
+                                        <td class="px-6 py-4 whitespace-nowrap">System Workflow</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <button onclick="alert('Partner: Viewing automated response log.')" class="text-mondelez-blue hover:underline">
+                                                <i data-lucide="file-search" class="w-4 h-4 text-mondelez-blue"></i> Track
+                                            </button>
+                                        </td>
                                     </tr>
                                     <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap">MDLZ-002</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">Query on Acrylamide levels</td>
-                                        <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Advanced</span></td>
-                                        <td class="px-6 py-4 whitespace-nowrap">Awaiting Legal (Approver) Sign-off</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">Food Safety / CGA (Approver)</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">MDLZ-004</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">Allergen data validation</td>
+                                        <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Intermediate - Assigned to SARA</span></td>
+                                        <td class="px-6 py-4 whitespace-nowrap">SARA (SME)</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <button class="sme-action-btn" onclick="alert('SME: Actioning task MDLZ-004.')">Action</button>
+                                            <button class="sme-approve-btn" onclick="alert('SME: Consulting CGA/Legal...')">Escalate</button>
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -669,6 +763,38 @@
                                 <li>**Advanced:** Response may require **Approver Sign-off** (CGA, Legal) before issue.</li>
                                 <li>**Closure:** System issues response to the Customer; Key Contacts are informed.</li>
                             </ul>
+                        </div>
+                    </div>
+                `
+            },
+            'enquiry_log': {
+                title: 'Enquiry Log (SME Full History)',
+                html: `
+                    <div class="space-y-6">
+                        <p class="text-lg text-red-600 font-bold flex items-center">
+                            <i data-lucide="scroll-text" class="w-6 h-6 mr-2"></i> Full Communication Audit Log (SME Access Only)
+                        </p>
+                        <p class="text-gray-600">This view provides the full, historical log of all enquiries, including SME discussions, approval routing, and internal communication, essential for tracking the entire lifecycle of complex cases.</p>
+
+                        <div class="overflow-x-auto bg-white p-6 rounded-xl shadow-lg">
+                            <h3 class="text-xl font-semibold text-mondelez-blue mb-4">Detailed Log: MDLZ-004 (Allergen Data)</h3>
+                            <div class="space-y-4 text-sm text-gray-700">
+                                <div class="p-3 border-l-4 border-mondelez-blue bg-blue-50">
+                                    <strong>[10:00 AM] System:</strong> Enquiry MDLZ-004 submitted by **partner@mdlz.com**. Classified as Intermediate. Responsible: SARA.
+                                </div>
+                                <div class="p-3 border-l-4 border-mondelez-yellow bg-yellow-50">
+                                    <strong>[10:15 AM] SARA (SME):</strong> Started action. Response requires verification of non-EU ingredient compliance. Consulting Food Safety. Status: Awaiting Food Safety input.
+                                </div>
+                                <div class="p-3 border-l-4 border-green-500 bg-green-50">
+                                    <strong>[1:00 PM] Food Safety (SME):</strong> Input provided. Response compiled. Awaiting CGA approval due to advanced classification. Status: Awaiting Approval.
+                                </div>
+                                <div class="p-3 border-l-4 border-red-500 bg-red-50">
+                                    <strong>[3:30 PM] CGA (Approver):</strong> Approved response. Final check initiated. Status: Ready for Issuance.
+                                </div>
+                                <div class="p-3 border-l-4 border-mondelez-blue bg-blue-50">
+                                    <strong>[3:35 PM] System:</strong> Response issued to **partner@mdlz.com**. Key Contacts informed. Enquiry Closed.
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `
@@ -903,7 +1029,7 @@
                 `
             },
         };
-        
+
         /**
          * Renders content specific to the current role on the Dashboard page.
          */
@@ -911,62 +1037,57 @@
             const container = document.getElementById('role-dashboard-content');
             if (!container) return;
 
+            const closedCard = document.getElementById('closed-enquiries-card');
+            const approvalsCard = document.getElementById('pending-approvals-card');
+            
             let html = '';
-            let cardVisibility = 'block';
-
+            
             if (currentRole === 'Partner') {
                 html = `
                     <div class="bg-mondelez-yellow text-mondelez-blue p-6 rounded-xl shadow-lg flex items-center justify-between">
                         <div>
                             <h2 class="text-2xl font-bold">Welcome, Partner! Submit & Track Your Enquiries.</h2>
-                            <p class="mt-1 text-sm">Use the form below or the AI Assistant to log a request. Check "Enquiry Matrix Examples" to ensure you provide mandatory data (SKU, GTIN, Customer Country).</p>
+                            <p class="mt-1 text-sm">You are logged in as **${currentUserEmail}**. Use the form below or the AI Assistant to log a request.</p>
                         </div>
                         <button class="bg-mondelez-blue text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-mondelez-blue/90 transition-colors flex items-center flex-shrink-0" onclick="showPage('new_enquiry', document.getElementById('enquiry-btn'))">
                             <i data-lucide="send" class="w-5 h-5 mr-2"></i> Submit New Enquiry
                         </button>
                     </div>
                 `;
-                // Partners see all cards
-                cardVisibility = 'block';
+                // Partner analytics priority: Show Closed, Hide Approvals
+                if (closedCard) closedCard.classList.remove('hidden');
+                if (approvalsCard) approvalsCard.classList.add('hidden');
             } else { // SME Mode
                 html = `
                     <div class="bg-mondelez-blue/90 text-white p-6 rounded-xl shadow-lg border-l-4 border-mondelez-yellow">
                         <h2 class="text-2xl font-bold">SME Dashboard: Actions & Approvals</h2>
-                        <p class="mt-1 text-sm text-mondelez-yellow">Your view is prioritized for *Actioning* assigned tasks and *Approving* complex responses.</p>
+                        <p class="mt-1 text-sm text-mondelez-yellow">You are logged in as **${currentUserEmail}**. Your priority is actioning assigned tasks and approving complex responses.</p>
                         <div class="mt-4 flex space-x-4">
                             <button class="bg-mondelez-yellow text-mondelez-blue font-bold py-2 px-4 rounded-lg hover:opacity-90 transition-colors" onclick="showPage('status_workflow', document.getElementById('enquiry-btn'))">
-                                Review Assigned Enquiries
+                                View Action Queue (4 Pending)
                             </button>
-                             <button class="bg-white text-mondelez-blue border border-mondelez-blue font-bold py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors" onclick="showPage('raci', document.getElementById('support-ref-btn'))">
-                                View RACI Matrix
+                             <button class="bg-white text-mondelez-blue border border-mondelez-blue font-bold py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors" onclick="showPage('enquiry_log', document.getElementById('enquiry-log-link'))">
+                                Access Enquiry Log
                             </button>
                         </div>
                     </div>
                 `;
-                // SMEs need the pending approvals card, but maybe not the others
-                cardVisibility = 'block';
+                // SME analytics priority: Hide Closed, Show Approvals
+                if (closedCard) closedCard.classList.add('hidden');
+                if (approvalsCard) approvalsCard.classList.remove('hidden');
             }
             
             container.innerHTML = html;
-            const approvalsCard = document.getElementById('pending-approvals-card');
-            if (approvalsCard) {
-                // Example of toggling a specific card based on role
-                // approvalsCard.style.display = currentRole === 'SME' ? 'block' : 'none';
-            }
             
-            // Re-render Lucide icons injected by JS
+            // Re-render Lucide icons injected by JS (needed for dashboard buttons)
             if (typeof createIcons !== 'undefined') {
                 createIcons({ icons: { Send, UserCheck, LayoutDashboard, Briefcase, Users, BookOpen, Award, Globe, ClipboardList, Phone, FileText, Bot, ChevronsLeft, GraduationCap, Calendar, MessageSquare, Download, ChevronDown, User, Send, ListOrdered, FileSearch, HelpCircle } });
             }
         }
         
-
         // --- Initialization ---
         window.onload = () => {
-            updateRoleDisplay(); // Set initial role display
-            // Set initial page
-            const initialPage = document.querySelector('.nav-link-item[data-page="dashboard"]');
-            showPage('dashboard', initialPage);
+            updateRoleDisplay(); // Set initial role display and trigger dashboard render
         };
     </script>
 </body>
